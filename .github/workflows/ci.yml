@@ -1,0 +1,108 @@
+name: CI - Static Code Analysis
+
+on:
+  push:
+    branches: [ main, master, develop ]
+  pull_request:
+    branches: [ main, master, develop ]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  static-analysis:
+    runs-on: ubuntu-latest
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.12"
+
+    - name: Install uv
+      uses: astral-sh/setup-uv@v5
+      with:
+        version: "latest"
+
+    - name: Install dependencies
+      run: |
+        uv pip install --system -r requirements.txt
+        uv pip install --system -r requirements-dev.txt
+
+    - name: Run Ruff linter
+      run: |
+        echo "Running Ruff linter..."
+        ruff check . --output-format=github
+
+    - name: Run Black formatter check
+      run: |
+        echo "Running Black formatter check..."
+        black --check --verbose .
+
+    - name: Run MyPy type checker
+      run: |
+        echo "Running MyPy type checker..."
+        mypy main.py --show-error-codes
+
+    - name: Run tests
+      run: |
+        echo "Running tests..."
+        pytest -v
+
+  test-api:
+    runs-on: ubuntu-latest
+    needs: static-analysis
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: "3.12"
+
+    - name: Install uv
+      uses: astral-sh/setup-uv@v5
+      with:
+        version: "latest"
+
+    - name: Install dependencies
+      run: |
+        uv pip install --system -r requirements.txt
+
+    - name: Test FastAPI application
+      run: |
+        echo "Testing FastAPI application startup..."
+        timeout 5s uvicorn main:app --host 0.0.0.0 --port 8000 || exit_code=$?
+        if [ ${exit_code:-0} -eq 124 ]; then
+          echo "API started successfully (timeout as expected)"
+          exit 0
+        else
+          echo "API failed to start"
+          exit 1
+        fi
+
+  docker-build:
+    runs-on: ubuntu-latest
+    needs: static-analysis
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Build Docker image
+      run: |
+        docker build -t fastapi-test:latest .
+
+    - name: Test Docker container
+      run: |
+        docker run -d -p 8000:8000 --name test-container fastapi-test:latest
+        sleep 5
+        curl -f http://localhost:8000/health || exit 1
+        docker stop test-container
+        docker rm test-container
