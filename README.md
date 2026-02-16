@@ -1,6 +1,6 @@
 # FastAPI Test Project
 
-A FastAPI Python 3 project with GitHub Actions CI performing static code analysis using modern Python tools.
+A FastAPI Python 3 project with GitHub Actions CI performing static code analysis using modern Python tools, containerized with Docker.
 
 ## 🚀 Features
 
@@ -9,15 +9,20 @@ A FastAPI Python 3 project with GitHub Actions CI performing static code analysi
   - **Ruff**: Fast Python linter (replaces Flake8, isort, and more)
   - **Black**: Uncompromising code formatter
   - **MyPy**: Static type checker
-- **GitHub Actions CI**: Automated testing on Python 3.10, 3.11, and 3.12
+- **uv Package Manager**: Fast Python package installer and resolver
+- **Docker Support**: Containerized application for easy deployment
+- **GitHub Actions CI**: Automated testing on Python 3.12
 - **Type Hints**: Full type annotations for better code quality
 
 ## 📋 Prerequisites
 
-- Python 3.10 or higher
-- pip (Python package manager)
+- Python 3.12 or higher
+- [uv](https://github.com/astral-sh/uv) (Python package manager)
+- Docker (optional, for containerized deployment)
 
 ## 🔧 Installation
+
+### Option 1: Local Development with uv
 
 1. Clone the repository:
 ```bash
@@ -25,23 +30,48 @@ git clone https://github.com/Pelleplutt/fastapi-test.git
 cd fastapi-test
 ```
 
-2. Create a virtual environment (recommended):
+2. Install uv (if not already installed):
 ```bash
-python -m venv venv
-source venv/bin/activate  # On Windows: venv\Scripts\activate
+curl -LsSf https://astral.sh/uv/install.sh | sh
 ```
 
-3. Install dependencies:
+3. Create a virtual environment and install dependencies:
 ```bash
-pip install -r requirements.txt
-pip install -r requirements-dev.txt  # For development tools
+uv venv
+source .venv/bin/activate  # On Windows: .venv\Scripts\activate
+uv pip install -r requirements.txt
+uv pip install -r requirements-dev.txt  # For development tools
+```
+
+### Option 2: Docker
+
+1. Clone the repository:
+```bash
+git clone https://github.com/Pelleplutt/fastapi-test.git
+cd fastapi-test
+```
+
+2. Build the Docker image:
+```bash
+docker build -t fastapi-test .
+```
+
+3. Run the container:
+```bash
+docker run -p 8000:8000 fastapi-test
 ```
 
 ## 🏃 Running the Application
 
+### Local Development
 Start the FastAPI server:
 ```bash
 uvicorn main:app --reload
+```
+
+### Docker
+```bash
+docker run -p 8000:8000 fastapi-test
 ```
 
 The API will be available at: `http://localhost:8000`
@@ -92,6 +122,24 @@ mypy main.py
 ruff check . && black --check . && mypy main.py
 ```
 
+## 🐳 Docker
+
+### Building the Image
+```bash
+docker build -t fastapi-test .
+```
+
+### Running the Container
+```bash
+docker run -d -p 8000:8000 --name fastapi-test fastapi-test
+```
+
+### Stopping the Container
+```bash
+docker stop fastapi-test
+docker rm fastapi-test
+```
+
 ## 🔄 GitHub Actions CI
 
 The CI pipeline automatically runs on:
@@ -101,14 +149,19 @@ The CI pipeline automatically runs on:
 
 ### CI Jobs
 
-1. **Static Analysis** (runs on Python 3.10, 3.11, 3.12):
+1. **Static Analysis** (Python 3.12):
+   - Installs dependencies using uv
    - Ruff linting
    - Black formatting check
    - MyPy type checking
-   - Unit tests (if available)
+   - Unit tests
 
 2. **API Test**:
    - Verifies FastAPI application starts successfully
+
+3. **Docker Build**:
+   - Builds Docker image
+   - Tests container startup and health check
 
 ## 🛠️ Development
 
@@ -116,9 +169,12 @@ The CI pipeline automatically runs on:
 ```
 fastapi-test/
 ├── main.py                 # FastAPI application
+├── test_main.py            # Test suite
 ├── requirements.txt        # Production dependencies
 ├── requirements-dev.txt    # Development dependencies
 ├── pyproject.toml         # Tool configurations
+├── Dockerfile             # Docker configuration
+├── .dockerignore          # Docker ignore rules
 ├── .gitignore             # Git ignore rules
 ├── .github/
 │   └── workflows/
